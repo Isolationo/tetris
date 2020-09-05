@@ -1,0 +1,39 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+#app {
+	width: 820px;
+	height: 680px;
+	margin: 50px auto;
+}
+
+.tetris {
+	display: block;
+	background-color: #e6e6e6;
+	float: left;
+}
+
+.board {
+	float: left;
+	display: block;
+}
+
+.score {
+	margin: 10px;
+}
+
+.precanvas {
+	margin: 10px;
+}
+
+.buttons {
+	margin: 10px;
+}
+
+.buttons button {
+	display: block;
+	margin: 5px;
+	padding: 5px;
+}

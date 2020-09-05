@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Tetris</title>
+		<link rel="stylesheet" href="./index.css" />
+	</head>
+	<body>
+		<div id="app">
+			<canvas class="tetris">HTML5 Canvas</canvas>
+			<div class="board">
+				<p class="score">Score: 0</p>
+				<canvas class="precanvas"></canvas>
+				<div class="buttons">
+					<button onclick="restart()">Restart</button>
+					<button onclick="play()">Puase/Play</button>
+				</div>
+			</div>
+		</div>
+
+		<script src="./index.js"></script>
+	</body>
+</html>
