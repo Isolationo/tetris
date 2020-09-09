@@ -24,10 +24,17 @@ class Tetris {
 		Object.assign(this, defaultOpts, arguments[0]);
 	}
 
-	deepClone(data) {
+	deepClone(data, typefunc) {
 		if (data == void 0) return;
 		let JSONStr = JSON.stringify(data);
-		return JSON.parse(JSONStr);
+		let JSONData = JSON.parse(JSONStr);
+
+		if (typefunc && typeof typefunc === 'function') {
+			let typeinst = new typefunc();
+			return Object.assign(typeinst, JSONData);
+		}
+
+		return JSONData;
 	}
 
 	beforeCreate() {
@@ -111,9 +118,7 @@ class Tetris {
 			}
 		];
 
-		this.shapes = shapes.map(
-			(shape) => new Shape(shape.blocks, shape.color, shape.center)
-		);
+		this.shapes = shapes.map((data) => this.deepClone(data, Shape));
 	}
 
 	beforeRender() {
@@ -191,41 +196,38 @@ class Tetris {
 	createNext() {
 		let max = this.shapes.length;
 		let random = Math.floor(Math.random() * max);
-		let next = this.deepClone(this.shapes[random]);
+		let next = this.shapes[random];
 
-		this.next = new Shape(next.blocks, next.color, next.center);
+		this.next = this.deepClone(next, Shape); // new Shape(next.blocks, next.color, next.center);
 		this.renderNext();
 
 		return this.next;
 	}
 
 	renderNext() {
-		if (this.ctx2 && this.next) {
+		if (this.canvas2 && this.ctx2 && this.next) {
 			this.ctx2.save();
 			this.ctx2.fillStyle = this.fillStyle;
-			this.ctx2.clearRect(0, 0, this.canvas.width, this.canvas.height);
-			this.ctx2.fillRect(0, 0, this.canvas.width, this.canvas.height);
+			this.ctx2.clearRect(0, 0, this.canvas2.width, this.canvas2.height);
+			this.ctx2.fillRect(0, 0, this.canvas2.width, this.canvas2.height);
 			this.ctx2.restore();
 
-			let shape = this.deepClone(this.next);
-			let shapeClone = new Shape(shape.blocks, shape.color, shape.center);
-
-			shapeClone.move(1, 1);
-			shapeClone.blocks.forEach((block) => {
+			// shape x，y 坐标都以 1 为起点，所以这里不用 -1 运算。
+			this.next.blocks.forEach((block) => {
 				this.ctx2.save();
 
-				this.ctx2.fillStyle = this.unitStyle || shapeClone.color;
+				this.ctx2.fillStyle = this.unitStyle || this.next.color;
 				this.ctx2.fillRect(
-					(block.x - 1) * this.unit,
-					(block.y - 1) * this.unit,
+					block.x * this.unit,
+					block.y * this.unit,
 					this.unit,
 					this.unit
 				);
 
 				this.ctx2.strokeStyle = this.strokeStyle;
 				this.ctx2.strokeRect(
-					(block.x - 1) * this.unit,
-					(block.y - 1) * this.unit,
+					block.x * this.unit,
+					block.y * this.unit,
 					this.unit,
 					this.unit
 				);
@@ -263,12 +265,16 @@ class Tetris {
 			this.createNext();
 
 			// 如果刚创建的 shape 遇到碰撞，则游戏结束
-			if (this.collision(this.current, 0, 1)) {
+			if (this.collision(this.current)) {
 				if (this.timer) clearInterval(this.timer);
 
-				// 去掉增减再检测一遍，还遇到碰撞就向上移动一格
-				if (this.collision(this.current)) {
-					this.current.move(0, -1);
+				// 刚创建的 shape 如果遇到碰撞，显示则会出现重叠
+				// 所以需要向上移动，这里需要跳过边界碰撞检测
+				// 两个单位就跳出显示范围了，这里没必要进行过量移动
+				for (let i = 0; i < 2; i++) {
+					if (this.collision(this.current, 0, -1, true)) {
+						this.current.move(0, -1);
+					}
 				}
 
 				this.beforeRender();
@@ -287,26 +293,25 @@ class Tetris {
 		}, this.speed);
 	}
 
-	collision(shape, x, y, pure) {
+	collision(shape, x, y, onlyUnit) {
 		x = x || 0;
 		y = y || 0;
 
-		let hasCross = shape.blocks.some((block) => {
-			// 普通边界碰撞检查
-			if (block.x < 1 || block.x > this.col) return true;
-			if (block.y < 1 || block.y > this.row) return true;
+		let hasCross =
+			onlyUnit ||
+			shape.blocks.some((block) => {
+				// 普通边界碰撞检查
+				if (block.x < 1 || block.x > this.col) return true;
+				if (block.y < 1 || block.y > this.row) return true;
 
-			// 增量边界碰撞检查
-			if (block.x + x < 1 || block.x + x > this.col) return true;
-			if (block.y + y < 1 || block.y + y > this.row) return true;
+				// 增量边界碰撞检查
+				if (block.x + x < 1 || block.x + x > this.col) return true;
+				if (block.y + y < 1 || block.y + y > this.row) return true;
 
-			return false;
-		});
-
-		if (pure) return hasCross;
-		if (hasCross) return true;
-
-		return shape.blocks.some((block) => {
+				return false;
+			});
+			
+		let hasUnit = shape.blocks.some((block) => {
 			return this.blocks.some((block2) => {
 				// 单元碰撞检测
 				if (block.x === block2.x && block.y === block2.y) return true;
@@ -317,6 +322,12 @@ class Tetris {
 				return false;
 			});
 		});
+
+		if (onlyUnit) {
+			return hasUnit;
+		} else {
+			return hasCross || hasUnit;
+		}
 	}
 
 	totalScore() {
@@ -456,16 +467,14 @@ class Tetris {
 		if (this.status === 'play' && this.current) {
 			if (this.current.center === 'nocenter') return;
 
-			let shape = this.deepClone(this.current);
-			let shapeClone = new Shape(shape.blocks, shape.color, shape.center);
+			let shape = this.deepClone(this.current, Shape);
 
-			shapeClone.transform();
-
-			if (this.collision(shapeClone)) {
+			shape.transform();
+			if (this.collision(shape)) {
 				return;
 			}
 
-			this.current = shapeClone;
+			this.current = shape;
 			this.beforeRender();
 			this.render();
 		}
@@ -517,6 +526,8 @@ class Shape {
 			block.x += x;
 			block.y += y;
 		});
+
+		return this;
 	}
 
 	transform() {
@@ -533,6 +544,8 @@ class Shape {
 			matrix[i].x = matrix[c].x - dy;
 			matrix[i].y = matrix[c].y + dx;
 		}
+
+		return this;
 	}
 }
 
