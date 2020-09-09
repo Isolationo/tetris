@@ -8,7 +8,7 @@ class Tetris {
 			shapes: [],
 			score: 0,
 			effectRatio: 0.6,
-			speed: 800,
+			speed: 1000,
 			fillStyle: '#999999',
 			strokeStyle: 'black',
 			strokeWidth: 1,
@@ -167,8 +167,8 @@ class Tetris {
 		}
 	}
 
-	renderOver() {
-		let text = 'Game Over',
+	renderText(text) {
+		let t = text || 'Game Over',
 			w = this.canvas.width,
 			h = this.canvas.height,
 			h2 = w / 6;
@@ -179,11 +179,11 @@ class Tetris {
 		this.ctx.fillStyle = '#ff0000';
 		this.ctx.strokeStyle = '#ffffff';
 
-		let m = this.ctx.measureText(text),
+		let m = this.ctx.measureText(t),
 			w2 = m.width;
 
-		this.ctx.fillText(text, w / 2 - w2 / 2, h / 2 - h2 / 2);
-		this.ctx.strokeText(text, w / 2 - w2 / 2, h / 2 - h2 / 2);
+		this.ctx.fillText(t, w / 2 - w2 / 2, h / 2 - h2 / 2);
+		this.ctx.strokeText(t, w / 2 - w2 / 2, h / 2 - h2 / 2);
 
 		this.ctx.restore();
 	}
@@ -273,7 +273,7 @@ class Tetris {
 
 				this.beforeRender();
 				this.render();
-				this.renderOver();
+				this.renderText();
 
 				this.dispatchEvent('tetrisstatus', {
 					status: (this.status = 'over')
@@ -389,6 +389,11 @@ class Tetris {
 			return;
 		}
 
+		if (this.status === 'pause') {
+			this.beforeRender();
+			this.render();
+		}
+
 		this.tick();
 		this.dispatchEvent('tetrisstatus', {
 			status: (this.status = 'play')
@@ -398,6 +403,7 @@ class Tetris {
 	pause() {
 		if (this.timer) clearInterval(this.timer);
 
+		this.renderText('Paused');
 		this.dispatchEvent('tetrisstatus', {
 			status: (this.status = 'pause')
 		});
@@ -415,6 +421,7 @@ class Tetris {
 			status: (this.status = 'ready')
 		});
 
+		this.beforeRender();
 		this.createNext();
 		this.play();
 	}
