@@ -24,14 +24,14 @@ class Tetris {
 		Object.assign(this, defaultOpts, arguments[0]);
 	}
 
-	deepClone(data, typefunc) {
+	deepClone(data, properties) {
 		if (data == void 0) return;
 		let JSONStr = JSON.stringify(data);
 		let JSONData = JSON.parse(JSONStr);
 
-		if (typefunc && typeof typefunc === 'function') {
-			let typeinst = new typefunc();
-			return Object.assign(typeinst, JSONData);
+		if (properties) {
+			let inst = Object.create(properties);
+			return Object.assign(inst, JSONData);
 		}
 
 		return JSONData;
@@ -118,7 +118,7 @@ class Tetris {
 			}
 		];
 
-		this.shapes = shapes.map((data) => this.deepClone(data, Shape));
+		this.shapes = shapes.map((data) => this.deepClone(data, Shape.prototype));
 	}
 
 	beforeRender() {
@@ -198,7 +198,7 @@ class Tetris {
 		let random = Math.floor(Math.random() * max);
 		let next = this.shapes[random];
 
-		this.next = this.deepClone(next, Shape); // new Shape(next.blocks, next.color, next.center);
+		this.next = this.deepClone(next, Shape.prototype); // new Shape(next.blocks, next.color, next.center);
 		this.renderNext();
 
 		return this.next;
@@ -310,7 +310,7 @@ class Tetris {
 
 				return false;
 			});
-			
+
 		let hasUnit = shape.blocks.some((block) => {
 			return this.blocks.some((block2) => {
 				// 单元碰撞检测
@@ -467,7 +467,7 @@ class Tetris {
 		if (this.status === 'play' && this.current) {
 			if (this.current.center === 'nocenter') return;
 
-			let shape = this.deepClone(this.current, Shape);
+			let shape = this.deepClone(this.current, Shape.prototype);
 
 			shape.transform();
 			if (this.collision(shape)) {
